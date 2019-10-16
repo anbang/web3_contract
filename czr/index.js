@@ -14,19 +14,61 @@
 
 "use strict";
 // var core = require('web3-core');
-var core = require('./help/web3-core/index');
+// var Method = require('web3-core-method');//转为Hrequest使用
+// var utils = require('web3-utils');
+// var formatters = require('web3-core-helpers').formatters;
+// var errors = require('web3-core-helpers').errors;
+// var promiEvent = require('web3-core-promievent');
+// var abi = require('web3-eth-abi');
 
 console.log("********** czr.js **********")
-
 var _ = require('underscore');
-var Method = require('web3-core-method');//转为Hrequest使用
 
-var utils = require('web3-utils');
-
-var formatters = require('web3-core-helpers').formatters;
-var errors = require('web3-core-helpers').errors;
-var promiEvent = require('web3-core-promievent');
-var abi = require('web3-eth-abi');
+var core = require('./help/web3-core/index');
+/**
+ * 使用下面方法
+ * core.packageInit 给Provider
+ */
+var Method = require('./help/web3-core-method');//转为Hrequest使用
+/**
+ * 使用下面方法
+ * new Method   //新建method
+ */
+var utils = require('./help/web3-utils');
+/**
+ * 使用下面方法
+ * utils._jsonInterfaceMethodToString
+ * utils._fireError
+ * utils.hexToNumber
+ * utils.isAddress(args.options.from)
+ */
+var formatters = require('./help/web3-core-helpers').formatters;
+/**
+ * 使用下面方法
+ * formatters.inputCallFormatter
+ * formatters.inputDefaultBlockNumberFormatter
+ * formatters.inputTransactionFormatter
+ * formatters.outputLogFormatter
+ */
+var errors = require('./help/web3-core-helpers').errors;
+/**
+ * 使用下面方法
+ * errors.InvalidNumberOfParams
+ */
+var promiEvent = require('./help/web3-core-promievent');
+/**
+ * 使用下面方法
+ * promiEvent((args.type !== 'send'))
+ */
+var abi = require('./help/web3-eth-abi');
+/**
+ * 使用下面方法
+ * abi.encodeFunctionSignature(funcName);
+ * abi.encodeEventSignature(funcName);
+ * abi.encodeParameters(inputs, args)
+ * abi.decodeLog(event.inputs, data.data, argTopics);
+ * abi.decodeParameters(outputs, returnValues);
+ */
 
 
 /**

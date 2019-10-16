@@ -1,4 +1,5 @@
-var requestManager = require('web3-core-requestmanager');
+// var requestManager = require('web3-core-requestmanager');
+var requestManager = require('../web3-core-requestmanager');
 
 module.exports = {
     packageInit: function (pkg, args) {
