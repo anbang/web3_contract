@@ -10,6 +10,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "argon2-wasm-pro": "^1.1.0",
+    "bignumber.js": "^7.2.1",
+    "bn.js": "^4.11.8",
+    "bs58check": "^2.1.2",
+    "ed25519-wasm-pro": "^1.1.0",
+    "forall": "^0.1.1",
+    "js-sha3": "^0.8.0",
     "truffle-hdwallet-provider": "^1.0.17",
     "web3": "^1.2.1"
   }

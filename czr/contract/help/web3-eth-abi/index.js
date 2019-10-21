@@ -24,7 +24,10 @@
 var _ = require('underscore');
 var utils = require('web3-utils');
 
-var EthersAbi = require('ethers/utils/abi-coder').AbiCoder;
+// var EthersAbi = require('ethers/utils/abi-coder').AbiCoder;
+var EthersAbi = require('./utils/abi-coder').AbiCoder;
+// console.log(EthersAbi)
+
 var ethersAbiCoder = new EthersAbi(function (type, value) {
     if (type.match(/^u?int/) && !_.isArray(value) && (!_.isObject(value) || value.constructor.name !== 'BN')) {
         return value.toString();

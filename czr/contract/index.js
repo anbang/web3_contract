@@ -26,18 +26,20 @@ var formatters = require('./help/web3-core-helpers').formatters;//TODO 后面去
 var Method = require('./help/web3-core-method');            //TODO 后面去掉，转为Hrequest使用
 var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉，转为Hrequest使用
 
+let utils = require("../utils/")
 
-
-
-
-var utils = require('./help/web3-utils');//TODO 今天晚上解决掉
+// var utils = require('./help/web3-utils');//TODO 今天晚上解决掉
 /**
  * 使用下面方法
  * utils._jsonInterfaceMethodToString   //添加到CZR util
  * utils._fireError                     //添加到CZR util
  * utils.isAddress(args.options.from)   //添加到CZR util
  */
+
+
 var abi = require('./help/web3-eth-abi');//TODO 添加到CZR util
+// let abi = require("../abi/")
+
 /**
  * 使用下面方法
  * abi.encodeFunctionSignature(funcName);
