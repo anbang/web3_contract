@@ -37,9 +37,9 @@ config.rinkeby();
 
 let utility = {
     init() {
-        // utility.prop();
+        utility.prop();
         // utility.methodsCall();
-        utility.onlyDeploy();
+        // utility.onlyDeploy();
 
         // console.log(`JSON接口`, myContract.options.jsonInterface);
         // utility.deploy1();

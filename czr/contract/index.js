@@ -28,7 +28,6 @@ var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉�
 
 let utils = require("../utils/")
 
-// var utils = require('./help/web3-utils');//TODO 今天晚上解决掉
 /**
  * 使用下面方法
  * utils._jsonInterfaceMethodToString   //添加到CZR util
@@ -37,8 +36,7 @@ let utils = require("../utils/")
  */
 
 
-var abi = require('./help/web3-eth-abi');//TODO 添加到CZR util
-// let abi = require("../abi/")
+let abi = require("../abi/")
 
 /**
  * 使用下面方法

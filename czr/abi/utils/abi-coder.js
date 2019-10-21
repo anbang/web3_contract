@@ -4,10 +4,6 @@ var __extends = (this && this.__extends) || (function () {
         ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
         function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
     return function (d, b) {
-        console.log("--------------d")
-        console.log(d)
-        console.log("--------------b")
-        console.log(b)
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -25,11 +21,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // var address_1 = require("./address");
 // var bignumber_1 = require("./bignumber");
 var address_1 = require("./address");
-console.log("--------------------address_1");
-console.log(address_1);
 var bignumber_1 = require("./bignumber");
-console.log("--------------------bignumber_1");
-console.log(bignumber_1);
 
 
 var bytes_1 = require("./bytes");

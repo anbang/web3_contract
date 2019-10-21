@@ -1,49 +1,109 @@
-const utils = require('../utils');
-//utils.judge(value) === 'object'
-var contractAbi = require('../utils/lib/abi-coder').AbiCoder;
-var abiCoder = new contractAbi(function (type, value) {
-    if (type.match(/^u?int/) && !utils.judge(value) === 'array' &&
-        (!utils.judge(value) === 'object' || value.constructor.name !== 'BN')) {
+/*
+ This file is part of web3.js.
+
+ web3.js is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ web3.js is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with web3.js.  If not, see <http://www.gnu.org/licenses/>.
+ */
+/**
+ * @file index.js
+ * @author Marek Kotewicz <marek@parity.io>
+ * @author Fabian Vogelsteller <fabian@frozeman.de>
+ * @date 2018
+ */
+
+var _ = require('underscore');
+var utils = require('../utils/index');
+var EthersAbi = require('./utils/abi-coder').AbiCoder;
+// console.log(EthersAbi)
+
+var ethersAbiCoder = new EthersAbi(function (type, value) {
+    if (type.match(/^u?int/) && !_.isArray(value) && (!_.isObject(value) || value.constructor.name !== 'BN')) {
         return value.toString();
     }
     return value;
 });
+
 // result method
 function Result() {
 }
 
 /**
- * 使用下面方法
- * abi.encodeFunctionSignature(funcName);
- * abi.encodeEventSignature(funcName);
- * abi.encodeParameters(inputs, args)
- * abi.decodeLog(event.inputs, data.data, argTopics);
- * abi.decodeParameters(outputs, returnValues);
+ * ABICoder prototype should be used to encode/decode solidity params of any type
  */
-
 var ABICoder = function () {
 };
 
-//编码函数名字
+/**
+ * Encodes the function name to its ABI representation, which are the first 4 bytes of the sha3 of the function name including  types.
+ *
+ * @method encodeFunctionSignature
+ * @param {String|Object} functionName
+ * @return {String} encoded function name
+ */
 ABICoder.prototype.encodeFunctionSignature = function (functionName) {
-    if (utils.judge(functionName) === 'object') {
+    if (_.isObject(functionName)) {
         functionName = utils._jsonInterfaceMethodToString(functionName);
     }
+
     return utils.sha3(functionName).slice(0, 10);
 };
 
+/**
+ * Encodes the function name to its ABI representation, which are the first 4 bytes of the sha3 of the function name including  types.
+ *
+ * @method encodeEventSignature
+ * @param {String|Object} functionName
+ * @return {String} encoded function name
+ */
 ABICoder.prototype.encodeEventSignature = function (functionName) {
-    if (utils.judge(functionName) === 'object') {
+    if (_.isObject(functionName)) {
         functionName = utils._jsonInterfaceMethodToString(functionName);
     }
+
     return utils.sha3(functionName);
 };
 
-ABICoder.prototype.encodeParameters = function (types, params) {
-    return abiCoder.encode(this.mapTypes(types), params);
+/**
+ * Should be used to encode plain param
+ *
+ * @method encodeParameter
+ * @param {String} type
+ * @param {Object} param
+ * @return {String} encoded plain param
+ */
+ABICoder.prototype.encodeParameter = function (type, param) {
+    return this.encodeParameters([type], [param]);
 };
 
-//使用简化格式的Map类型
+/**
+ * Should be used to encode list of params
+ *
+ * @method encodeParameters
+ * @param {Array} types
+ * @param {Array} params
+ * @return {String} encoded list of params
+ */
+ABICoder.prototype.encodeParameters = function (types, params) {
+    return ethersAbiCoder.encode(this.mapTypes(types), params);
+};
+
+/**
+ * Map types if simplified format is used
+ *
+ * @method mapTypes
+ * @param {Array} types
+ * @return {Array}
+ */
 ABICoder.prototype.mapTypes = function (types) {
     var self = this;
     var mappedTypes = [];
@@ -61,19 +121,34 @@ ABICoder.prototype.mapTypes = function (types) {
 
             return;
         }
+
         mappedTypes.push(type);
     });
+
     return mappedTypes;
 };
 
-//检查类型是否为简化的Struct结构格式
+/**
+ * Check if type is simplified struct format
+ *
+ * @method isSimplifiedStructFormat
+ * @param {string | Object} type
+ * @returns {boolean}
+ */
 ABICoder.prototype.isSimplifiedStructFormat = function (type) {
     return typeof type === 'object' && typeof type.components === 'undefined' && typeof type.name === 'undefined';
 };
 
-//当使用encode / decodeParameter中的简化格式时，映射正确的元组类型和名称
+/**
+ * Maps the correct tuple type and name when the simplified format in encode/decodeParameter is used
+ *
+ * @method mapStructNameAndType
+ * @param {string} structName
+ * @return {{type: string, name: *}}
+ */
 ABICoder.prototype.mapStructNameAndType = function (structName) {
     var type = 'tuple';
+
     if (structName.indexOf('[]') > -1) {
         type = 'tuple[]';
         structName = structName.slice(0, -2);
@@ -82,7 +157,13 @@ ABICoder.prototype.mapStructNameAndType = function (structName) {
     return { type: type, name: structName };
 };
 
-//将简化的格式映射到ABICoder的预期格式
+/**
+ * Maps the simplified format in to the expected format of the ABICoder
+ *
+ * @method mapStructToCoderFormat
+ * @param {Object} struct
+ * @return {Array}
+ */
 ABICoder.prototype.mapStructToCoderFormat = function (struct) {
     var self = this;
     var components = [];
@@ -109,15 +190,44 @@ ABICoder.prototype.mapStructToCoderFormat = function (struct) {
     return components;
 };
 
+/**
+ * Encodes a function call from its json interface and parameters.
+ *
+ * @method encodeFunctionCall
+ * @param {Array} jsonInterface
+ * @param {Array} params
+ * @return {String} The encoded ABI for this function call
+ */
+ABICoder.prototype.encodeFunctionCall = function (jsonInterface, params) {
+    return this.encodeFunctionSignature(jsonInterface) + this.encodeParameters(jsonInterface.inputs, params).replace('0x', '');
+};
+
+/**
+ * Should be used to decode bytes to plain param
+ *
+ * @method decodeParameter
+ * @param {String} type
+ * @param {String} bytes
+ * @return {Object} plain param
+ */
 ABICoder.prototype.decodeParameter = function (type, bytes) {
     return this.decodeParameters([type], bytes)[0];
 };
+
+/**
+ * Should be used to decode list of params
+ *
+ * @method decodeParameter
+ * @param {Array} outputs
+ * @param {String} bytes
+ * @return {Array} array of plain params
+ */
 ABICoder.prototype.decodeParameters = function (outputs, bytes) {
     if (outputs.length > 0 && (!bytes || bytes === '0x' || bytes === '0X')) {
         throw new Error('Returned values aren\'t valid, did it run Out of Gas?');
     }
 
-    var res = abiCoder.decode(this.mapTypes(outputs), '0x' + bytes.replace(/0x/i, ''));
+    var res = ethersAbiCoder.decode(this.mapTypes(outputs), '0x' + bytes.replace(/0x/i, ''));
     var returnValue = new Result();
     returnValue.__length__ = 0;
 
@@ -127,7 +237,7 @@ ABICoder.prototype.decodeParameters = function (outputs, bytes) {
 
         returnValue[i] = decodedValue;
 
-        if (utils.judge(output) === 'object' && output.name) {
+        if (_.isObject(output) && output.name) {
             returnValue[output.name] = decodedValue;
         }
 
@@ -137,9 +247,18 @@ ABICoder.prototype.decodeParameters = function (outputs, bytes) {
     return returnValue;
 };
 
+/**
+ * Decodes events non- and indexed parameters.
+ *
+ * @method decodeLog
+ * @param {Object} inputs
+ * @param {String} data
+ * @param {Array} topics
+ * @return {Array} array of plain params
+ */
 ABICoder.prototype.decodeLog = function (inputs, data, topics) {
     var _this = this;
-    topics = utils.judge(topics) === 'array' ? topics : [topics];
+    topics = _.isArray(topics) ? topics : [topics];
 
     data = data || '';
 
