@@ -215,7 +215,7 @@ let hexToBytes = function (hex) {
 
 
 module.exports = {
-    isAccoun: isAccount,
+    isAccount: isAccount,
     _fireError: _fireError,
     _jsonInterfaceMethodToString: _jsonInterfaceMethodToString,
 

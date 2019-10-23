@@ -101,8 +101,8 @@ let utility = {
     onlyDeploy() {
 
         try {
-            let cccc = myContract.deploy({ data: bytecode },function(data){
-                console.log("callback",data)
+            let cccc = myContract.deploy({ data: bytecode }, function (data) {
+                console.log("callback", data)
 
             });
             console.log("cccc")

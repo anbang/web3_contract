@@ -27,18 +27,15 @@ var Method = require('./help/web3-core-method');            //TODO 后面去掉�
 var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉，转为Hrequest使用
 
 let utils = require("../utils/")
+console.log(utils.isAccount)
+let abi = require("../abi/")
 
 /**
  * 使用下面方法
  * utils._jsonInterfaceMethodToString   //添加到CZR util
  * utils._fireError                     //添加到CZR util
- * utils.isAddress(args.options.from)   //添加到CZR util
- */
-
-
-let abi = require("../abi/")
-
-/**
+ * utils.isAccount(args.options.from)   //添加到CZR util
+ * 
  * 使用下面方法
  * abi.encodeFunctionSignature(funcName);
  * abi.encodeEventSignature(funcName);
@@ -472,7 +469,7 @@ Contract.prototype._getRpc = function _getRpc() {
             case 'send':
 
                 // return error, if no "from" is specified
-                if (!utils.isAddress(args.options.from)) {
+                if (!utils.isAccount(args.options.from)) {
                     return utils._fireError(new Error('No "from" address specified in neither the given options, nor the default options.'), defer.eventEmitter, defer.reject, args.callback);
                 }
 
@@ -577,7 +574,7 @@ Contract.prototype._setRpcOpt = function _setRpcOpt(args, defer) {
     processedArgs.options.data = this.encodeABI();
 
     // add contract address
-    if (!this._deployData && !utils.isAddress(this._parent.options.address))
+    if (!this._deployData && !utils.isAccount(this._parent.options.address))
         throw new Error('This contract object doesn\'t have address set yet, please set an address first.');
 
     if (!this._deployData)
