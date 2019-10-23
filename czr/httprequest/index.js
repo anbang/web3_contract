@@ -283,6 +283,8 @@ HttpRequest.prototype.accountCode = async function (account) {
  * @returns {Promise<{code, msg, hash}>}
  * */
 HttpRequest.prototype.sendBlock = async function (transaction) {
+    console.log("czr.js", transaction)
+
     if (!transaction || !transaction.from || !transaction.password) {
         return { code: 100, msg: `no param - transaction ${JSON.stringify(transaction)}` }
     }
@@ -296,7 +298,7 @@ HttpRequest.prototype.sendBlock = async function (transaction) {
         "action": "send_block",
         "from": transaction.from,
         "to": "",
-        "amount": transaction.amount,
+        "amount": transaction.amount.toString(),
         "password": transaction.password,
         "gas": transaction.gas,
         "gas_price": transaction.gas_price,
@@ -322,7 +324,7 @@ HttpRequest.prototype.sendBlock = async function (transaction) {
  * @returns {Promise<{object}>}
  * */
 HttpRequest.prototype.generateOfflineBlock = async function (transaction) {
-    if (!transaction || !transaction.from ) {
+    if (!transaction || !transaction.from) {
         return { code: 100, msg: `no param - transaction ${JSON.stringify(transaction)}` }
     }
     if (!(+transaction.amount >= 0 && +transaction.gas >= 0)) {
@@ -746,6 +748,8 @@ HttpRequest.prototype.stop = async function () {
 
  * */
 HttpRequest.prototype.call = async function (call_obj) {
+    //TODO 需要修改
+    console.log(call_obj)
     if (!call_obj.from) {
         return { code: 100, msg: 'no param - from' }
     }
@@ -757,9 +761,9 @@ HttpRequest.prototype.call = async function (call_obj) {
     }
     let opt = {
         "action": "call",
-        "from": call_obj.from,
+        "from": call_obj.from || '',
         "to": call_obj.to,
-        "data": call_obj.data,
+        "data": call_obj.data || '',
         "mci": call_obj.mci ? call_obj.mci : "latest"
     };
     return await asyncfunc(opt);
