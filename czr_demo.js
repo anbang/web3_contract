@@ -41,25 +41,32 @@ let utility = {
         // utility.methodsCall();
         // utility.onlyDeploy();
 
+
+        // call 
+        // utility.encodeABI()
+        // utility.testCall1()
+        // utility.testCall2()
+
         // console.log(`JSON接口`, myContract.options.jsonInterface);
-        utility.deploy1();
+        // utility.deploy1();
         // utility.methods();
+
+        // utility.testSend1();
+        // utility.testSend2();
+        // utility.testEvent();
+
+
+        utility.EventTest();
     },
     prop() {
         console.log('------属性-----')
         console.log(`myContract.options`, myContract.options);
         console.log(`初始地址: ${myContract.options.address}`);
-        myContract.options.address = '0xc608d3853748c8E178A0803Bc6061C466B2F3c57'
-        console.log(`改变地址: ${myContract.options.address}`);
         console.log(`JSON接口`, myContract.options.jsonInterface.length);//计算hash
-        utility.clone();
-    },
-    clone() {
-        console.log("\n 准备使用clone方法------------------------------ ");
-        let myContract2 = myContract.clone();
-        myContract.options.address = '0x4b983d2cb24ac3953aa2ae1a0ceba4e5f1e1a5da'
-        console.log(`初始地址：${myContract.options.address}`);
-        console.log(`克隆地址：${myContract2.options.address}`);
+
+        // myContract.options.address = '0xc608d3853748c8E178A0803Bc6061C466B2F3c57'
+        // console.log(`改变地址: ${myContract.options.address}`);
+        // utility.clone();
     },
 
     methodsCall() {
@@ -80,24 +87,47 @@ let utility = {
         //         console.log('001 estimateGas error', error)
         //     });
 
-        // myContract.methods.testCall1().call(function (error, result) {
-        //     console.log("\n002 start------------------------------ ");
-        //     console.log(error)
-        //     console.log(result)
-        //     console.log("002 end------------------------------ ");
-        // }).then(data => {
-        //     console.log('003 testCall1 data', data)
-        // }).catch(function (error) {
-        //     console.log('003 catch error', error)
-        // });
-
-        // myContract.methods.testCall1().call().then(data => {
-        //     console.log('004 testCall1 data', data)
-        // }).catch(function (error) {
-        //     console.log('004 error', error)
-        // });
-
     },
+
+    encodeABI() {
+        console.log('------encodeABI-----')
+        console.log(`encodeABIData: ${myContract.methods.testCall1().encodeABI()}`);
+        let encodeABIData = myContract.methods.testSend2(200, 201).encodeABI();
+        console.log(`encodeABIData: ${encodeABIData}`);
+        console.log('------encodeABI-----')
+    },
+    testCall1() {
+        console.log('------testCall1-----')
+        myContract.methods.testCall1().call(function (error, result) {
+            console.log("Call1 start------ ");
+            console.log(error)
+            console.log(result)
+            console.log("Call1 end------ ");
+        }).then(data => {
+            console.log('Call1 data', data)//data 是 1
+            console.log('------testCall1-----')
+        }).catch(function (error) {
+            console.log('Call1 catch error', error)
+        });
+    },
+    testCall2() {
+        console.log('------testCall2-----')
+        myContract.methods.testCall2(0, 1).call(function (error, result) {
+            console.log("Call2 start------ ");
+            console.log(error)
+            console.log(result)
+            console.log("Call2 start------ ");
+        }).then(data => {
+            console.log('Call2 data', data);//{ '0': '110', '1': '119' }
+            console.log('------testCall2-----');
+        }).catch(function (error) {
+            console.log('Call2 catch error', error)
+        });
+    },
+
+
+
+    //***************** */
     onlyDeploy() {
 
         try {
@@ -181,6 +211,99 @@ let utility = {
         //     }).catch(function (error) {
         //         console.log('testSend2 error', error)
         //     });
+    },
+
+    testSend1() {
+        console.log("----- testSend1 -----")
+
+        myContract.methods.testSend1()
+            .send({
+                from: '0x7386445b7C0022FB0c6B08466a8E6ae4A97A134b',
+                gas: 300000,
+                gasPrice: '1000000000'
+            }, function (error, transactionHash) {
+                console.log("回调")
+                console.log("error ==> ", error)
+                console.log("transactionHash ==> ", transactionHash)
+            })
+            .on('error', function (error) {
+                console.log("EVENT:出错啦")
+                console.log(error)
+            })
+            //交易hash
+            .on('transactionHash', function (transactionHash) {
+                console.log('EVENT:交易Hash', transactionHash)
+            })
+            //收据
+            .on('receipt', function (receipt) {
+                console.log('EVENT:收据')
+                console.log(receipt.transactionHash)
+            })
+            // 确认数
+            .on('confirmation', function (confirmationNumber, receipt) {
+                console.log('EVENT:确认数')
+                console.log(confirmationNumber)
+                // console.log(receipt)
+            })
+            .then(function (newContractInstance) {
+                console.log('新合约实例')
+                console.log(newContractInstance) // instance with the new contract address
+            })
+
+    },
+    testSend2() {
+        // console.log(myContract.methods.testSend2(200, 201));
+        console.log("----- testSend2 -----")
+        myContract.methods.testSend2(200, 201)
+            .send(
+                { from: "0x7386445b7C0022FB0c6B08466a8E6ae4A97A134b", gas: 300000, gasPrice: '1000000000' }
+            )
+            .then(data => {
+                console.log('testSend2 data', data)
+            }).catch(function (error) {
+                console.log('testSend2 error', error)
+            });
+    },
+    testEvent() {
+        console.log("----- testEvent -----")
+        myContract.methods.testEvent()
+            .send(
+                { from: "0x7386445b7C0022FB0c6B08466a8E6ae4A97A134b", gas: 300000, gasPrice: '1000000000' }
+                , function (error, transactionHash) {
+                    console.log("回调")
+                    console.log("error ==> ", error)
+                    console.log("transactionHash ==> ", transactionHash)
+                }
+            )
+            .then(data => {
+                console.log('testEvent data', data)
+            }).catch(function (error) {
+                console.log('testEvent error', error)
+            });
+    },
+    clone() {
+        console.log("\n 准备使用clone方法------------------------------ ");
+        let myContract2 = myContract.clone();
+        myContract.options.address = '0x4b983d2cb24ac3953aa2ae1a0ceba4e5f1e1a5da'
+        console.log(`初始地址：${myContract.options.address}`);
+        console.log(`克隆地址：${myContract2.options.address}`);
+    },
+
+    //Event
+
+    EventTest() {
+        console.log("----- EventTest -----")
+        myContract.getPastEvents('EventTest', {
+            filter: { myIndexedParam: [20, 23], myOtherIndexedParam: '0x123456789...' }, // Using an array means OR: e.g. 20 or 23
+            fromBlock: 0,
+            toBlock: 'latest'
+        })
+            .then(function (events) {
+                console.log("收到啦")
+                console.log(events) // same results as the optional callback above
+                console.log("----- EventTest -----")
+            });
+
     }
 };
 utility.init();

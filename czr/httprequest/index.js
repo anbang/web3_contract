@@ -820,6 +820,20 @@ HttpRequest.prototype.traceTransaction = async function (hash) {
     return await asyncfunc(opt);
 };
 
+//获取debug_trace_transaction信息
+HttpRequest.prototype.logs = async function (options) {
+    let opt = {
+        "action": "logs",
+        "from_stable_block_index": options.from_stable_block_index || 0,
+        "account": options.account || '',
+        "topics": options.topics || ''
+    };
+    if (options.to_stable_block_index) {
+        opt.to_stable_block_index = options.to_stable_block_index;
+    }
+    return await asyncfunc(opt);
+};
+
 // **************************************************************** 合约相关 结束
 
 module.exports = HttpRequest;

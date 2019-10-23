@@ -70,11 +70,12 @@ let config = {
         });
     },
     czr: function () {
-        account = 'czr_3D75PTzmnfe6eopvWR5291qkMs3i1xFL8niQKowPd9bv1DEVAW';//czr_3D75PTzmnfe6eopvWR5291qkMs3i1xFL8niQKowPd9bv1DEVAW
+        account = 'czr_3DG8FjYSAqkBNubcSVAAjAtSQ9Q2tWVNwPS8VHQ55XwWG4DsTS';//czr_3D75PTzmnfe6eopvWR5291qkMs3i1xFL8niQKowPd9bv1DEVAW
         Contract.setProvider(czrUrl);
         myContract = new Contract(interfaceFile, account, {
             from: 'czr_33EuccjKjcZgwbHYp8eLhoFiaKGARVigZojeHzySD9fQ1ysd7u',
-            gas_price: '2000000000000'
+            gas: 2000000,
+            gas_price: '1000000000'
         });
     }
 }
@@ -85,10 +86,32 @@ let utility = {
     init() {
         // utility.prop();
         // utility.methodsCall();
-        // utility.onlyDeploy();
         // console.log(`JSON接口`, myContract.options.jsonInterface);
-        utility.deploy1();
-        // utility.methods();
+
+
+        //第零步
+        // utility.allMethods();
+
+        //第一步
+        // utility.testSend1();
+
+        //第二步
+        // utility.testCall1();
+
+        //第三部
+        // utility.testSend2();
+
+        //第四部
+        // utility.testCall2()
+
+        //send
+        // utility.onlyDeploy();
+        // utility.deploy1();
+        // utility.testEvent();
+
+
+        utility.EventTest();
+
     },
     prop() {
         console.log('------属性-----')
@@ -103,52 +126,51 @@ let utility = {
         // utility.clone();
     },
 
-    methodsCall() {
-        //encodeABI()
-        //call()
-        //sendBlock()
-        //
-        console.log("\n testCall2******");
-        // console.log(myContract.methods.testCall2(0, 1));
+    //abi
+    allMethods() {
+        console.log("----- allMethods -----");
+        console.log(myContract.methods);
+        console.log("----- allMethods -----");
 
-        // myContract.methods.testCall2(0, 1).call().then(data => {
-        //     console.log('005 testCall2 data', data)
-        // });
-
+        console.log('\n\n\n')
+        console.log('------encodeABI-----')
+        console.log(`testCall1: ${myContract.methods.testCall1().encodeABI()}`);
         let encodeABIData = myContract.methods.testSend2(200, 201).encodeABI();
-        console.log(`000 encodeABIData:${encodeABIData}`)
-        myContract.methods.testSend2(200, 201).call().then(data => {
-            console.log("call send", data)
-        })
-
-
-        // myContract.methods.testSend2(200, 201).estimateGas({ from: "0x7386445b7C0022FB0c6B08466a8E6ae4A97A134b", gas: 8 })
-        //     .then(data => {
-        //         console.log('001 estimateGas data', data)
-        //     }).catch(function (error) {
-        //         console.log('001 estimateGas error', error)
-        //     });
-
-        // myContract.methods.testCall1().call(function (error, result) {
-        //     console.log("\n002 start------------------------------ ");
-        //     console.log(error)
-        //     console.log(result)
-        //     console.log("002 end------------------------------ ");
-        // }).then(data => {
-        //     console.log('003 testCall1 data', data)
-        // }).catch(function (error) {
-        //     console.log('003 catch error', error)
-        // });
-
-        // myContract.methods.testCall1().call().then(data => {
-        //     console.log('004 testCall1 data', data)
-        // }).catch(function (error) {
-        //     console.log('004 error', error)
-        // });
-
+        console.log(`testSend2: ${encodeABIData}`);
+        console.log('------encodeABI-----')
     },
-    onlyDeploy() {
 
+    //call
+    testCall1() {
+        console.log('------testCall1-----')
+        myContract.methods.testCall1().call(function (error, result) {
+            console.log("Call1 start------ ");
+            console.log(error)
+            console.log(result)
+            console.log("Call1 end------ ");
+        }).then(data => {
+            console.log('Call1 data', data)
+            console.log('------testCall1-----')
+        }).catch(function (error) {
+            console.log('Call1 catch error', error)
+        });
+    },
+    testCall2() {
+        console.log('------testCall2-----')
+        myContract.methods.testCall2(0, 1).call(function (error, result) {
+            console.log("Call2 start------ ");
+            console.log(error)
+            console.log(result)
+            console.log("Call2 start------ ");
+        }).then(data => {
+            console.log('Call2 data', data);
+            console.log('------testCall2-----');
+        }).catch(function (error) {
+            console.log('Call2 catch error', error)
+        });
+    },
+    //************************************* */
+    onlyDeploy() {
         try {
             let cccc = myContract.deploy({ data: bytecode }, function (data) {
                 console.log("callback", data)
@@ -161,16 +183,12 @@ let utility = {
         }
     },
     deploy1() {
-        // console.log(myContract.deploy({
-        //     data: bytecode
-        // }));
         myContract.deploy({
             data: bytecode
         })
             .sendBlock({
-                amount: 1,
                 password: '12345678',
-                gas: 300000
+                amount: "0"
             })
             .then(function (res) {
                 console.log('新合约实例')
@@ -180,63 +198,60 @@ let utility = {
                 console.log('catch error', error)
             });
     },
-
-    methods() {
+    testSend1() {
+        console.log("----- testSend1 -----")
         myContract.methods.testSend1()
             .sendBlock({
-                from: '0x7386445b7C0022FB0c6B08466a8E6ae4A97A134b',
-                gas: 300000,
-                gasPrice: '1000000000'
+                amount: "0",
+                password: '12345678',
             }, function (error, transactionHash) {
                 console.log("回调")
                 console.log("error ==> ", error)
                 console.log("transactionHash ==> ", transactionHash)
             })
-            // .on('error', function (error) {
-            //     console.log("EVENT:出错啦")
-            //     console.log(error)
-            // })
-            // //交易hash
-            // .on('transactionHash', function (transactionHash) {
-            //     console.log('EVENT:交易Hash', transactionHash)
-            // })
-            // //收据
-            // .on('receipt', function (receipt) {
-            //     console.log('EVENT:收据')
-            //     console.log(receipt)
-            // })
-            // // 确认数
-            // .on('confirmation', function (confirmationNumber, receipt) {
-            //     console.log('EVENT:确认数')
-            //     console.log(confirmationNumber)
-            //     // console.log(receipt)
-            // })
             .then(function (newContractInstance) {
                 console.log('新合约实例')
                 console.log(newContractInstance) // instance with the new contract address
+                console.log("----- testSend1 -----")
             })
 
-
-        // console.log(myContract.methods.testSend2(200, 201));
-        // myContract.methods.testSend2(200, 201)
-        //     .sendBlock(
-        //         {
-        //             from: "0x7386445b7C0022FB0c6B08466a8E6ae4A97A134b",
-        //             gas: 300000,
-        //             gasPrice: '1000000000'
-        //         },
-        //         function (error, transactionHash) {
-        //             console.log("回调")
-        //             console.log("error ==> ", error)
-        //             console.log("transactionHash ==> ", transactionHash)
-        //         }
-        //     )
-        //     .then(data => {
-        //         console.log('testSend2 data', data)
-        //     }).catch(function (error) {
-        //         console.log('testSend2 error', error)
-        //     });
-
+    },
+    testSend2() {
+        console.log("----- testSend2 -----")
+        myContract.methods.testSend2(110, 119)
+            .sendBlock(
+                {
+                    amount: "0",
+                    password: '12345678',
+                },
+                function (error, transactionHash) {
+                    console.log("回调")
+                    console.log("error ==> ", error)
+                    console.log("transactionHash ==> ", transactionHash)
+                }
+            )
+            .then(data => {
+                console.log('testSend2 data', data)
+                console.log("----- testSend2 -----")
+            }).catch(function (error) {
+                console.log('testSend2 error', error)
+            });
+    },
+    testEvent() {
+        console.log("----- testEvent -----")
+        myContract.methods.testEvent()
+            .sendBlock(
+                {
+                    amount: "0",
+                    password: '12345678',
+                }
+            )
+            .then(data => {
+                console.log('testEvent data', data)
+                console.log("----- testEvent -----")
+            }).catch(function (error) {
+                console.log('testEvent error', error)
+            });
     },
     clone() {
         console.log("\n 准备使用clone方法------------------------------ ");
@@ -244,6 +259,20 @@ let utility = {
         myContract.options.address = '0x4b983d2cb24ac3953aa2ae1a0ceba4e5f1e1a5da'
         console.log(`初始地址：${myContract.options.address}`);
         console.log(`克隆地址：${myContract2.options.address}`);
+    },
+
+    //Event
+    EventTest() {
+        console.log("----- EventTest -----")
+        myContract.getPastEvents('EventTest', {
+            from_stable_block_index: 0
+        })
+            .then(function (events) {
+                console.log("收到啦")
+                console.log(events) // same results as the optional callback above
+                console.log("----- EventTest -----")
+            });
+
     }
 };
 utility.init();

@@ -21,7 +21,8 @@ let HttpRequest = require('../httprequest');
 let request = new HttpRequest();// Send= > generateOfflineBlock sendOfflineBlock
 
 //TODO 暂时不去掉...敏感信息相关的
-var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉，转为Hrequest使用
+// var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉，转为Hrequest使用
+var formatters = require('web3-core-helpers').formatters;
 
 // **************
 let utils = require("../utils/")
@@ -282,13 +283,13 @@ Contract.prototype._createTxObject = function () {
         if (this.nextMethod) {
             return this.nextMethod.apply(null, args);
         }
-        var errorMsg = {
-            args_length: args.length,
-            method_inputs_length: this.method.inputs.length,
-            method_name: this.method.name
-        }
 
-        throw errorMsg
+        throw `
+            args_length: ${args.length},
+            method_inputs_length: ${this.method.inputs.length},
+            method_name: ${this.method.name}
+        `
+
     }
 
     txObject.arguments = args || [];
@@ -396,12 +397,14 @@ Contract.setProvider = function (provider, accounts) {
  * @param {String} type the type this execute function should execute
  * @param {Boolean} makeRequest if true, it simply returns the request parameters, rather than executing it
  */
-Contract.prototype._getRpc = function () {
+Contract.prototype._getRpc = async function () {
+    let _this = this;
     //初始化需要调用RPC的参数
     var args = this._parent._setRpcOpt.call(this, Array.prototype.slice.call(arguments));
     // var defer = promiEvent((args.type !== 'send'));//这里没有用了
-    console.log("_getRpc：是否需要请求节点", arguments)
-    console.log("需要的RPC交互", args)
+    console.log("___getRpc：是否需要请求节点", arguments)
+    console.log("___需要的RPC交互", args)
+    console.log("___outputs", this._method.outputs);
     let argsOpts = args.options;
     switch (args.type) {
         case 'call':
@@ -411,7 +414,14 @@ Contract.prototype._getRpc = function () {
                 data: argsOpts.data || '',
                 mci: argsOpts.mci || ''
             }
-            return request.call(callOpts);
+            let result = await request.call(callOpts);
+            console.log("___result", result);
+            if (result.code === 0) {
+                return _this._parent._decodeMethodReturn(_this._method.outputs, result.output);
+            } else {
+                return result;
+            }
+
         case 'send':
             let sendOpts = {
                 "from": argsOpts.from,
@@ -494,6 +504,176 @@ Contract.prototype._getCallback = function (args) {
         return args.pop(); // modify the args array!
     }
 };
+
+
+// 解吗返回的结果
+Contract.prototype._decodeMethodReturn = function (outputs, returnValues) {
+    // console.log("这是解码的方法啊")
+    //[ { name: '', type: 'uint256' }, { name: '', type: 'uint256' } ] 
+    //'0x000000000000000000000000000000000000000000000000000000000000006e0000000000000000000000000000000000000000000000000000000000000077'
+    // console.log(outputs);
+    // console.log(returnValues);
+
+    if (!returnValues) {
+        return null;
+    }
+
+    // returnValues = returnValues.length >= 2 ? returnValues.slice(2) : returnValues;
+    returnValues = returnValues.indexOf("0x") === -1 ? "0x" + returnValues : returnValues;
+    var result = abi.decodeParameters(outputs, returnValues);//可以用decode来解析
+    // console.log(result);
+    if (result.__length__ === 1) {
+        return result[0];
+    } else {
+        delete result.__length__;
+        return result;
+    }
+};
+
+/**
+ * Get past events from contracts
+ *
+ * @method getPastEvents
+ * @param {String} event
+ * @param {Object} options
+ * @param {Function} callback
+ * @return {Object} the promievent
+ */
+Contract.prototype.getPastEvents = function (eventName, options) {
+    console.log(eventName, options);
+    var subOptions = this._generateEventOptions.apply(this, arguments);
+    console.log("subOptions", subOptions)
+
+    let opt = {
+        "from_stable_block_index": options.from_stable_block_index || 0,
+        "to_stable_block_index": options.to_stable_block_index,
+        "account": options.account || '',
+        "topics": subOptions.params.topics || ''
+    }
+    return request.logs(opt);
+    // var getPastLogs = new Method({
+    //     name: 'getPastLogs',
+    //     call: 'eth_getLogs',
+    //     params: 1,
+    //     inputFormatter: [formatters.inputLogFormatter],
+    //     outputFormatter: this._decodeEventABI.bind(subOptions.event)
+    // });
+    // getPastLogs.setRequestManager(this._requestManager);
+    // var call = getPastLogs.buildCall();
+
+    // getPastLogs = null;
+
+    // return call(subOptions.params, subOptions.callback);
+};
+/**
+ * Gets the event signature and outputformatters
+ *
+ * @method _generateEventOptions
+ * @param {Object} event
+ * @param {Object} options
+ * @param {Function} callback
+ * @return {Object} the event options object
+ */
+Contract.prototype._generateEventOptions = function () {
+    var args = Array.prototype.slice.call(arguments);
+
+    // get the callback
+    var callback = this._getCallback(args);
+
+    // get the options
+    var options = (_.isObject(args[args.length - 1])) ? args.pop() : {};
+
+    var event = (_.isString(args[0])) ? args[0] : 'allevents';
+    event = (event.toLowerCase() === 'allevents') ? {
+        name: 'ALLEVENTS',
+        jsonInterface: this.options.jsonInterface
+    } : this.options.jsonInterface.find(function (json) {
+        return (json.type === 'event' && (json.name === event || json.signature === '0x' + event.replace('0x', '')));
+    });
+
+    if (!event) {
+        throw new Error('Event "' + event.name + '" doesn\'t exist in this contract.');
+    }
+
+    if (!utils.isAccount(this.options.address)) {
+        throw new Error('This contract object doesn\'t have address set yet, please set an address first.');
+    }
+
+    return {
+        params: this._encodeEventABI(event, options),
+        event: event,
+        callback: callback
+    };
+};
+
+/**
+ * Should be used to encode indexed params and options to one final object
+ *
+ * @method _encodeEventABI
+ * @param {Object} event
+ * @param {Object} options
+ * @return {Object} everything combined together and encoded
+ */
+Contract.prototype._encodeEventABI = function (event, options) {
+    options = options || {};
+    var filter = options.filter || {},
+        result = {};
+
+    ['fromBlock', 'toBlock'].filter(function (f) {
+        return options[f] !== undefined;
+    }).forEach(function (f) {
+        result[f] = formatters.inputBlockNumberFormatter(options[f]);
+    });
+
+    // use given topics
+    if (_.isArray(options.topics)) {
+        result.topics = options.topics;
+
+        // create topics based on filter
+    } else {
+
+        result.topics = [];
+
+        // add event signature
+        if (event && !event.anonymous && event.name !== 'ALLEVENTS') {
+            result.topics.push(event.signature);
+        }
+
+        // add event topics (indexed arguments)
+        if (event.name !== 'ALLEVENTS') {
+            var indexedTopics = event.inputs.filter(function (i) {
+                return i.indexed === true;
+            }).map(function (i) {
+                var value = filter[i.name];
+                if (!value) {
+                    return null;
+                }
+
+                // TODO: https://github.com/ethereum/web3.js/issues/344
+                // TODO: deal properly with components
+
+                if (_.isArray(value)) {
+                    return value.map(function (v) {
+                        return abi.encodeParameter(i.type, v);
+                    });
+                }
+                return abi.encodeParameter(i.type, value);
+            });
+
+            result.topics = result.topics.concat(indexedTopics);
+        }
+
+        if (!result.topics.length)
+            delete result.topics;
+    }
+
+    if (this.options.address) {
+        result.address = this.options.address.toLowerCase();
+    }
+
+    return result;
+};
+
 
 //******************************************************************************************* */
 module.exports = Contract;
