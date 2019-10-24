@@ -6,9 +6,6 @@
  *  var contract = new Contract(abi, account, ...)
  */
 "use strict";
-console.log("********** czr.js **********")
-var _ = require('underscore');
-
 //RPC通信
 const url = require('url');
 let HttpRequest = require('../httprequest');
@@ -271,14 +268,14 @@ Contract.prototype._encodeMethodABI = function () {
             ((json.signature === methodSignature || json.signature === methodSignature.replace('0x', '') || json.name === methodSignature) && json.type === 'function'));
     }).map(function (json) {
         // console.log("json", json)
-        var inputLength = (_.isArray(json.inputs)) ? json.inputs.length : 0;
+        var inputLength = (utils.judge(json.inputs) === 'array') ? json.inputs.length : 0;
         if (inputLength !== args.length) {
             throw new Error('The number of arguments is not matching the methods required number. You need to pass ' + inputLength + ' arguments.');
         }
         if (json.type === 'function') {
             signature = json.signature;
         }
-        return _.isArray(json.inputs) ? json.inputs : [];
+        return (utils.judge(json.inputs) === 'array') ? json.inputs : [];
     }).map(function (inputs) {
         // console.log("___encodeParameters",inputs, args)
         // console.log("___encodeParameters",abi.encodeParameters(inputs, args).replace('0x', ''))
@@ -379,21 +376,18 @@ Contract.prototype._getRpc = async function () {
                 "previous": argsOpts.previous || ''
             }
             let sendResult = await request.sendBlock(sendOpts);
-            // 返回
-            if (sendResult.code !== 0) {
-                _this._parent._runCallback(args.callback, new Error("Send Error"))
-                // return sendResult;
-                return new Promise(function (resolve, reject) {
-                    reject(sendResult);
-                })
-            }
-            _this._parent._runCallback(args.callback, null, sendResult.hash);
-
-            //再次获取
-            let searchRes;
-            let searchTimer = null;
-            let startSearchTimer;
             return new Promise(function (resolve, reject) {
+                // 返回
+                if (sendResult.code !== 0) {
+                    _this._parent._runCallback(args.callback, new Error("Send Error"))
+                    reject(sendResult);
+                }
+                _this._parent._runCallback(args.callback, null, sendResult.hash);
+
+                //再次获取
+                let searchRes;
+                let searchTimer = null;
+                let startSearchTimer;
                 let startSearchHash = async function () {
                     //上面已做过判断，必定会有hash
                     searchRes = await request.getBlockState(sendResult.hash);
@@ -424,7 +418,6 @@ Contract.prototype._getRpc = async function () {
                 }
                 startSearchTimer();
             })
-
     }
 };
 
@@ -448,7 +441,7 @@ Contract.prototype._setRpcOpt = function (args, defer) {
         processedArgs.type === 'call' &&
         args[args.length - 1] !== true &&
         (
-            _.isString(args[args.length - 1]) ||
+            (utils.judge(args[args.length - 1]) === 'string') ||
             isFinite(args[args.length - 1])
         )
     ) {
@@ -457,7 +450,7 @@ Contract.prototype._setRpcOpt = function (args, defer) {
 
 
     // get the options
-    processedArgs.options = (_.isObject(args[args.length - 1])) ? args.pop() : {};
+    processedArgs.options = (utils.judge(args[args.length - 1]) === 'object') ? args.pop() : {};
     processedArgs.options = this._parent._getOrSetDefaultOptions(processedArgs.options);
     processedArgs.options.data = this.encodeABI();
 
@@ -488,7 +481,7 @@ Contract.prototype._setRpcOpt = function (args, defer) {
  * @return {Function} the callback
  */
 Contract.prototype._getCallback = function (args) {
-    if (args && _.isFunction(args[args.length - 1])) {
+    if (args && (utils.judge(args[args.length - 1]) === 'function')) {
         return args.pop(); // modify the args array!
     }
 };
@@ -535,9 +528,9 @@ Contract.prototype._decodeMethodReturn = function (outputs, returnValues) {
  * @return {Object} the promievent
  */
 Contract.prototype.getPastEvents = function (eventName, options) {
-    console.log(eventName, options);
+    // console.log(eventName, options);
     var subOptions = this._generateEventOptions.apply(this, arguments);
-    console.log("subOptions", subOptions)
+    // console.log("subOptions", subOptions)
     let curTopic = [];
     subOptions.params.topics.forEach(item => {
         curTopic.push(item.indexOf("0x") === 0 ? item.slice(2) : item)
@@ -549,7 +542,7 @@ Contract.prototype.getPastEvents = function (eventName, options) {
         "account": subOptions.params.account || '',
         "topics": curTopic || ''
     }
-    console.log("opt", opt);
+    // console.log("opt", opt);
     return request.logs(opt);
 };
 /**
@@ -568,9 +561,10 @@ Contract.prototype._generateEventOptions = function () {
     var callback = this._getCallback(args);
 
     // get the options
-    var options = (_.isObject(args[args.length - 1])) ? args.pop() : {};
+    var options = (utils.judge(args[args.length - 1]) === 'object') ? args.pop() : {};
 
-    var event = (_.isString(args[0])) ? args[0] : 'allevents';
+    var event = (utils.judge(args[0]) === 'string') ? args[0] : 'allevents';
+
     event = (event.toLowerCase() === 'allevents') ? {
         name: 'ALLEVENTS',
         jsonInterface: this.options.jsonInterface
@@ -607,7 +601,7 @@ Contract.prototype._encodeEventABI = function (event, options) {
         result = {};
 
     // use given topics
-    if (_.isArray(options.topics)) {
+    if (utils.judge(options.topics) === 'array') {
         result.topics = options.topics;
         // create topics based on filter
     } else {
@@ -617,8 +611,8 @@ Contract.prototype._encodeEventABI = function (event, options) {
             result.topics.push(event.signature);
         }
         // add event topics (indexed arguments)
-        console.log("event.name", event.name)
-        console.log("event.inputs", event.inputs)
+        // console.log("event.name", event.name)
+        // console.log("event.inputs", event.inputs)
         if (event.name !== 'ALLEVENTS') {
             var indexedTopics = event.inputs.filter(function (i) {
                 return i.indexed === true;
@@ -629,7 +623,7 @@ Contract.prototype._encodeEventABI = function (event, options) {
                 }
                 // TODO: https://github.com/ethereum/web3.js/issues/344
                 // TODO: deal properly with components
-                if (_.isArray(value)) {
+                if (utils.judge(value) === 'array') {
                     return value.map(function (v) {
                         return abi.encodeParameter(i.type, v);
                     });

@@ -94,7 +94,7 @@ let utility = {
         // utility.testSend1();
 
         //第二步
-        utility.testCall1();
+        // utility.testCall1();
 
         //第三部
         // utility.testSend2();
