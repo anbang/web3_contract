@@ -31,7 +31,6 @@ let input = {
 let output = JSON.parse(solc.compile(JSON.stringify(input)));
 
 let contractByteCode = output.contracts['test1.sol']['Web3Test'].evm.bytecode.object
-let methodIdentifiers = output.contracts['test1.sol']['Web3Test'].evm.methodIdentifiers
 let abi = output.contracts['test1.sol']['Web3Test']['abi']
 
 bytecode = contractByteCode;
@@ -108,7 +107,6 @@ let utility = {
         // utility.onlyDeploy();
         // utility.deploy1();
         // utility.testEvent();
-
 
         utility.EventTest();
 
@@ -191,11 +189,10 @@ let utility = {
                 amount: "0"
             })
             .then(function (res) {
-                console.log('新合约实例')
                 console.log(res)
             })
             .catch(function (error) {
-                console.log('catch error', error)
+                console.log('catch', error)
             });
     },
     testSend1() {

@@ -17,8 +17,9 @@ console.log("********** czr.js **********")
 var _ = require('underscore');
 
 //TODO 需要判断有没有
+const url = require('url');
 let HttpRequest = require('../httprequest');
-let request = new HttpRequest();// Send= > generateOfflineBlock sendOfflineBlock
+let request;
 
 //TODO 暂时不去掉...敏感信息相关的
 // var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉，转为Hrequest使用
@@ -123,13 +124,13 @@ var Contract = function Contract(jsonInterface, address, options) {
                     funcName = utils._jsonInterfaceMethodToString(method);//带类型的函数 testCall2(uint256,uint256)
                     // console.log("--- _jsonInterfaceMethodToString ---")
                     // console.log(method);
-                    // console.log("funcName",funcName);
+                    // console.log("funcName", funcName);
                 }
 
                 // function
                 if (method.type === 'function') {
                     method.signature = abi.encodeFunctionSignature(funcName);//a()
-                    // console.log(method.signature, method.name);
+                    // console.log("method.signature", method.signature);
 
                     func = _this._createTxObject.bind({
                         method: method,
@@ -335,6 +336,8 @@ Contract.prototype._encodeMethodABI = function _encodeMethodABI() {
         }
         return _.isArray(json.inputs) ? json.inputs : [];
     }).map(function (inputs) {
+        // console.log("___encodeParameters",inputs, args)
+        // console.log("___encodeParameters",abi.encodeParameters(inputs, args).replace('0x', ''))
         return abi.encodeParameters(inputs, args).replace('0x', '');
     })[0] || '';//方法和参数转成16进制
 
@@ -381,9 +384,12 @@ Contract.prototype._getOrSetDefaultOptions = function (options) {
 };
 
 Contract.setProvider = function (provider, accounts) {
-    // Contract.currentProvider = provider;//改为在core.packageInit中设置了
-    //TODO 把RPC的请求地址写一下 provider,地址可以一起改
-    console.log("1先设置提供者", accounts)
+    let parseUrlObj = url.parse(provider);
+    let opt = {
+        host: parseUrlObj.hostname,
+        port: parseUrlObj.port
+    }
+    request = new HttpRequest(opt);
     this._czrAccounts = accounts;
 };
 
@@ -421,7 +427,6 @@ Contract.prototype._getRpc = async function () {
             } else {
                 return result;
             }
-
         case 'send':
             let sendOpts = {
                 "from": argsOpts.from,
@@ -517,7 +522,6 @@ Contract.prototype._decodeMethodReturn = function (outputs, returnValues) {
     if (!returnValues) {
         return null;
     }
-
     // returnValues = returnValues.length >= 2 ? returnValues.slice(2) : returnValues;
     returnValues = returnValues.indexOf("0x") === -1 ? "0x" + returnValues : returnValues;
     var result = abi.decodeParameters(outputs, returnValues);//可以用decode来解析
@@ -543,32 +547,24 @@ Contract.prototype.getPastEvents = function (eventName, options) {
     console.log(eventName, options);
     var subOptions = this._generateEventOptions.apply(this, arguments);
     console.log("subOptions", subOptions)
+    let curTopic = [];
+    subOptions.params.topics.forEach(item => {
+        curTopic.push(item.indexOf("0x") === 0 ? item.slice(2) : item)
+    })
 
     let opt = {
         "from_stable_block_index": options.from_stable_block_index || 0,
         "to_stable_block_index": options.to_stable_block_index,
-        "account": options.account || '',
-        "topics": subOptions.params.topics || ''
+        "account": subOptions.params.address || '',
+        "topics": curTopic || ''
     }
+    console.log("opt", opt);
     return request.logs(opt);
-    // var getPastLogs = new Method({
-    //     name: 'getPastLogs',
-    //     call: 'eth_getLogs',
-    //     params: 1,
-    //     inputFormatter: [formatters.inputLogFormatter],
-    //     outputFormatter: this._decodeEventABI.bind(subOptions.event)
-    // });
-    // getPastLogs.setRequestManager(this._requestManager);
-    // var call = getPastLogs.buildCall();
-
-    // getPastLogs = null;
-
-    // return call(subOptions.params, subOptions.callback);
 };
 /**
  * Gets the event signature and outputformatters
  *
- * @method _generateEventOptions
+ * @method generateEventOptions
  * @param {Object} event
  * @param {Object} options
  * @param {Function} callback
@@ -619,27 +615,19 @@ Contract.prototype._encodeEventABI = function (event, options) {
     var filter = options.filter || {},
         result = {};
 
-    ['fromBlock', 'toBlock'].filter(function (f) {
-        return options[f] !== undefined;
-    }).forEach(function (f) {
-        result[f] = formatters.inputBlockNumberFormatter(options[f]);
-    });
-
     // use given topics
     if (_.isArray(options.topics)) {
         result.topics = options.topics;
-
         // create topics based on filter
     } else {
-
         result.topics = [];
-
         // add event signature
         if (event && !event.anonymous && event.name !== 'ALLEVENTS') {
             result.topics.push(event.signature);
         }
-
         // add event topics (indexed arguments)
+        console.log("event.name", event.name)
+        console.log("event.inputs", event.inputs)
         if (event.name !== 'ALLEVENTS') {
             var indexedTopics = event.inputs.filter(function (i) {
                 return i.indexed === true;
@@ -648,10 +636,8 @@ Contract.prototype._encodeEventABI = function (event, options) {
                 if (!value) {
                     return null;
                 }
-
                 // TODO: https://github.com/ethereum/web3.js/issues/344
                 // TODO: deal properly with components
-
                 if (_.isArray(value)) {
                     return value.map(function (v) {
                         return abi.encodeParameter(i.type, v);
@@ -659,18 +645,15 @@ Contract.prototype._encodeEventABI = function (event, options) {
                 }
                 return abi.encodeParameter(i.type, value);
             });
-
             result.topics = result.topics.concat(indexedTopics);
         }
-
-        if (!result.topics.length)
-            delete result.topics;
+        // if (!result.topics.length) {
+        //     delete result.topics;
+        // }
     }
-
     if (this.options.address) {
-        result.address = this.options.address.toLowerCase();
+        result.address = this.options.address;
     }
-
     return result;
 };
 

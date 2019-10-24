@@ -2,15 +2,16 @@
 // let rpc     = require('node-json-rpc');
 let rpc = require('./rpc-main');
 let options = require("./config");
+let client;
 
 let HttpRequest = function (host, timeout, apiVersion) {
-    this.hostCon = host || options;
+    this.hostCon = Object.assign(options, host);
+    client = new rpc.Client(options);
     // this.timeout = timeout || 0;
     // this.apiVersion = apiVersion || "v1";
 };
 
-
-let client = new rpc.Client(options);
+console.log("1哪个先执行");
 
 function asyncfunc(opt) {
     return new Promise((resolve, reject) => {
@@ -26,8 +27,7 @@ function asyncfunc(opt) {
     })
 }
 
-
-HttpRequest.prototype.client = client;
+// HttpRequest.prototype.client = client;
 /* 
 
         return 100//没有第一个参数
@@ -821,15 +821,15 @@ HttpRequest.prototype.traceTransaction = async function (hash) {
 };
 
 //获取debug_trace_transaction信息
-HttpRequest.prototype.logs = async function (options) {
+HttpRequest.prototype.logs = async function (opts) {
     let opt = {
         "action": "logs",
-        "from_stable_block_index": options.from_stable_block_index || 0,
-        "account": options.account || '',
-        "topics": options.topics || ''
+        "from_stable_block_index": opts.from_stable_block_index || 0,
+        "account": opts.account || '',
+        "topics": opts.topics || ''
     };
-    if (options.to_stable_block_index) {
-        opt.to_stable_block_index = options.to_stable_block_index;
+    if (opts.to_stable_block_index) {
+        opt.to_stable_block_index = opts.to_stable_block_index;
     }
     return await asyncfunc(opt);
 };
