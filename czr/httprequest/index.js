@@ -11,8 +11,6 @@ let HttpRequest = function (host, timeout, apiVersion) {
     // this.apiVersion = apiVersion || "v1";
 };
 
-console.log("1哪个先执行");
-
 function asyncfunc(opt) {
     return new Promise((resolve, reject) => {
         client.call(opt,
@@ -283,8 +281,7 @@ HttpRequest.prototype.accountCode = async function (account) {
  * @returns {Promise<{code, msg, hash}>}
  * */
 HttpRequest.prototype.sendBlock = async function (transaction) {
-    console.log("czr.js", transaction)
-
+    // console.log("czr.js", transaction)
     if (!transaction || !transaction.from || !transaction.password) {
         return { code: 100, msg: `no param - transaction ${JSON.stringify(transaction)}` }
     }

@@ -47,31 +47,31 @@ let Contract = require('./czr/contract');
 let rinkebyUrl = 'https://rinkeby.infura.io/uIkf4qZgOSqDV0Ir5np1';
 let ganacheUrl = 'http://127.0.0.1:8545/';
 let czrUrl = 'http://127.0.0.1:8765/';
-let account = '';
+let curAccount = '';
 
 let myContract = {}
 let config = {
     rinkeby: function () {
-        account = '0x4b983d2cb24ac3953aa2ae1a0ceba4e5f1e1a5da';
+        curAccount = '0x4b983d2cb24ac3953aa2ae1a0ceba4e5f1e1a5da';
         const mnemonic = "F9F8F1A056C8F00D176807CE4FF89BE34D95BD751795C1687FE5F14A86A5A146"; // 12 word mnemonic
         let provider = new HDWalletProvider(mnemonic, rinkebyUrl);
         // Contract.setProvider(rinkebyUrl);
         Contract.setProvider(provider);
-        myContract = new Contract(interfaceFile, account, {
+        myContract = new Contract(interfaceFile, curAccount, {
             gasPrice: '10000000000'
         });
     },
     gannche: function () {
-        account = '0x57BbD9A3bD36AA4D5C93CF218088E0661502f337';
+        curAccount = '0x57BbD9A3bD36AA4D5C93CF218088E0661502f337';
         Contract.setProvider(ganacheUrl);
-        myContract = new Contract(interfaceFile, account, {
+        myContract = new Contract(interfaceFile, curAccount, {
             gasPrice: '2000000000000'
         });
     },
     czr: function () {
-        account = 'czr_3DG8FjYSAqkBNubcSVAAjAtSQ9Q2tWVNwPS8VHQ55XwWG4DsTS';//czr_3D75PTzmnfe6eopvWR5291qkMs3i1xFL8niQKowPd9bv1DEVAW
+        curAccount = 'czr_3DG8FjYSAqkBNubcSVAAjAtSQ9Q2tWVNwPS8VHQ55XwWG4DsTS';//czr_3D75PTzmnfe6eopvWR5291qkMs3i1xFL8niQKowPd9bv1DEVAW
         Contract.setProvider(czrUrl);
-        myContract = new Contract(interfaceFile, account, {
+        myContract = new Contract(interfaceFile, curAccount, {
             from: 'czr_33EuccjKjcZgwbHYp8eLhoFiaKGARVigZojeHzySD9fQ1ysd7u',
             gas: 2000000,
             gas_price: '1000000000'
@@ -84,9 +84,8 @@ config.czr();
 let utility = {
     init() {
         // utility.prop();
-        // utility.methodsCall();
-        // console.log(`JSON接口`, myContract.options.jsonInterface);
 
+        // utility.clone();
 
         //第零步
         // utility.allMethods();
@@ -95,7 +94,7 @@ let utility = {
         // utility.testSend1();
 
         //第二步
-        // utility.testCall1();
+        utility.testCall1();
 
         //第三部
         // utility.testSend2();
@@ -105,22 +104,23 @@ let utility = {
 
         //send
         // utility.onlyDeploy();
+
         // utility.deploy1();
+
         // utility.testEvent();
 
-        utility.EventTest();
-
+        // utility.EventTest();
     },
     prop() {
         console.log('------属性-----')
         console.log(`myContract.options`, myContract.options);
-        console.log(`初始地址: ${myContract.options.address}`);
+        console.log(`初始地址: ${myContract.options.account}`);
         console.log(`JSON接口:`, myContract.options.jsonInterface.length);//计算hash
 
 
         //注释
-        // myContract.options.address = '0xc608d3853748c8E178A0803Bc6061C466B2F3c57'
-        // console.log(`改变地址: ${myContract.options.address}`);
+        // myContract.options.account = '0xc608d3853748c8E178A0803Bc6061C466B2F3c57'
+        // console.log(`改变地址: ${myContract.options.account}`);
         // utility.clone();
     },
 
@@ -170,9 +170,7 @@ let utility = {
     //************************************* */
     onlyDeploy() {
         try {
-            let cccc = myContract.deploy({ data: bytecode }, function (data) {
-                console.log("callback", data)
-            });
+            let cccc = myContract.deploy({ data: bytecode })
             console.log("cccc")
             console.log(cccc)
         } catch (error) {
@@ -187,6 +185,10 @@ let utility = {
             .sendBlock({
                 password: '12345678',
                 amount: "0"
+            }, function (error, transactionHash) {
+                console.log("deploy回调")
+                console.log("error ==> ", error)
+                console.log("transactionHash ==> ", transactionHash)
             })
             .then(function (res) {
                 console.log(res)
@@ -208,8 +210,11 @@ let utility = {
             })
             .then(function (newContractInstance) {
                 console.log('新合约实例')
-                console.log(newContractInstance) // instance with the new contract address
+                console.log(newContractInstance) // instance with the new contract account
                 console.log("----- testSend1 -----")
+            }).catch(error => {
+                console.log("catch")
+                console.log(error)
             })
 
     },
@@ -253,9 +258,9 @@ let utility = {
     clone() {
         console.log("\n 准备使用clone方法------------------------------ ");
         let myContract2 = myContract.clone();
-        myContract.options.address = '0x4b983d2cb24ac3953aa2ae1a0ceba4e5f1e1a5da'
-        console.log(`初始地址：${myContract.options.address}`);
-        console.log(`克隆地址：${myContract2.options.address}`);
+        myContract2.options.account = '0xXXXXXXXXXXXXXXXXXXXXXX'
+        console.log(`初始地址：${myContract.options.account}`);
+        console.log(`克隆地址：${myContract2.options.account}`);
     },
 
     //Event

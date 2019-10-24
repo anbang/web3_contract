@@ -39,7 +39,7 @@ let utility = {
     init() {
         // utility.prop();
         // utility.methodsCall();
-        // utility.onlyDeploy();
+        utility.onlyDeploy();
 
 
         // call 
@@ -56,7 +56,7 @@ let utility = {
         // utility.testEvent();
 
 
-        utility.EventTest();
+        // utility.EventTest();
     },
     prop() {
         console.log('------属性-----')

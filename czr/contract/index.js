@@ -1,30 +1,20 @@
 /**
- * @file contract.js
- *
  * To initialize a contract use:
  *
  *  var Contract = require('web3-eth-contract');
  *  Contract.setProvider('ws://localhost:8546');
- *  var contract = new Contract(abi, address, ...);
- *
- * @author Fabian Vogelsteller <fabian@ethereum.org>
- * @date 2017
+ *  var contract = new Contract(abi, account, ...)
  */
-
-
 "use strict";
 console.log("********** czr.js **********")
 var _ = require('underscore');
 
-//TODO 需要判断有没有
+//RPC通信
 const url = require('url');
 let HttpRequest = require('../httprequest');
 let request;
 
 //TODO 暂时不去掉...敏感信息相关的
-// var promiEvent = require('./help/web3-core-promievent');    //TODO 后面去掉，转为Hrequest使用
-var formatters = require('web3-core-helpers').formatters;
-
 // **************
 let utils = require("../utils/")
 let abi = require("../abi/")
@@ -50,21 +40,16 @@ let abi = require("../abi/")
  * @method Contract
  * @constructor
  * @param {Array} jsonInterface
- * @param {String} address
+ * @param {String} account
  * @param {Object} options
  */
-var Contract = function Contract(jsonInterface, address, options) {
+var Contract = function Contract(jsonInterface, account, options) {
     var _this = this,
         args = Array.prototype.slice.call(arguments);
-    console.log("2开始new了")
     //判断原型是不是在Contract
     if (!(this instanceof Contract)) {
         throw new Error('Please use the "new" keyword to instantiate a contract object!');
     }
-
-    // sets _requestmanager
-    // console.log("this.constructor.currentProvider",this.constructor.currentProvider)
-
     //判断jsonInterface
     if (!jsonInterface || !(Array.isArray(jsonInterface))) {
         throw new Error('You must provide the json interface of the contract when instantiating a contract object.');
@@ -74,33 +59,45 @@ var Contract = function Contract(jsonInterface, address, options) {
     this.options = {};
     this.methods = {};
 
-    //处理赋参数；options 和 address
+    //处理赋参数；options 和 合约账号
     var lastArg = args[args.length - 1];
-    if (_.isObject(lastArg) && !_.isArray(lastArg)) {
+    if (utils.judge(lastArg) === 'object') {
         options = lastArg;
-        this.options = _.extend(this.options, this._getOrSetDefaultOptions(options));
-        if (_.isObject(address)) {
-            address = null;
+        this.options = Object.assign(this.options, this._getOrSetDefaultOptions(options));
+        //初始化ads
+        if (utils.judge(account) === 'object') {
+            account = null;
         }
     }
 
-
-    this._address = null;
+    this._account = null;
     this._jsonInterface = [];
-    // get default account from the Class
-    var defaultAccount = this.constructor.defaultAccount;
-    var defaultMci = this.constructor.defaultMci || 'latest';
 
-    // 在 this.options 上设置 address
-    Object.defineProperty(this.options, 'address', {
+    // get default account from the mci
+    var defaultMci = this.constructor.defaultMci || 'latest';
+    Object.defineProperty(this, 'defaultMci', {
+        get: function () {
+            return defaultMci;
+        },
+        set: function (val) {
+            if (val) {
+                defaultMci = val;
+            }
+            return defaultMci;
+        },
+        enumerable: true
+    });
+
+    // 在 this.options 上设置 账户
+    Object.defineProperty(this.options, 'account', {
         set: function (value) {
             if (value) {
-                //地址格式化校验
-                _this._address = value;
+                _this._account = value;
             }
+            return _this._account;
         },
         get: function () {
-            return _this._address;
+            return _this._account;
         },
         enumerable: true
     });
@@ -114,17 +111,13 @@ var Contract = function Contract(jsonInterface, address, options) {
                     funcName;//方法名
 
                 // make constant and payable backwards compatible
-                //判断是否可变
-                //是否可以付钱
+                //判断是否可变 和 是否可以付钱
                 method.constant = (method.stateMutability === "view" || method.stateMutability === "pure" || method.constant);
                 method.payable = (method.stateMutability === "payable" || method.payable);
 
                 //方法名
                 if (method.name) {
                     funcName = utils._jsonInterfaceMethodToString(method);//带类型的函数 testCall2(uint256,uint256)
-                    // console.log("--- _jsonInterfaceMethodToString ---")
-                    // console.log(method);
-                    // console.log("funcName", funcName);
                 }
 
                 // function
@@ -137,7 +130,7 @@ var Contract = function Contract(jsonInterface, address, options) {
                         parent: _this
                     });//用来赋值给XXX
 
-                    // add method only if not one already exists
+                    // 仅当不存在添加方法时
                     if (!_this.methods[method.name]) {
                         _this.methods[method.name] = func;
                     } else {
@@ -152,8 +145,8 @@ var Contract = function Contract(jsonInterface, address, options) {
 
                     _this.methods[method.signature] = func;
                     _this.methods[funcName] = func;
-                    // event
                 } else if (method.type === 'event') {
+                    // event
                     method.signature = abi.encodeEventSignature(funcName);
                 }
                 return method;
@@ -166,97 +159,54 @@ var Contract = function Contract(jsonInterface, address, options) {
         enumerable: true
     });
 
-    // 在 this 上设置 jsonInterface
-    Object.defineProperty(this, 'defaultAccount', {
-        get: function () {
-            return defaultAccount;
-        },
-        set: function (val) {
-            if (val) {
-                defaultAccount = val;
-            }
-
-            return val;
-        },
-        enumerable: true
-    });
-
-    // 在 this 上设置 jsonInterface
-    Object.defineProperty(this, 'defaultMci', {
-        get: function () {
-            return defaultMci;
-        },
-        set: function (val) {
-            if (val) {
-                defaultMci = val;
-            }
-            return val;
-        },
-        enumerable: true
-    });
-
     // set getter/setter properties
-    this.options.address = address;
+    this.options.account = account;
     this.options.jsonInterface = jsonInterface;
 };
 
-
 /**
- * clone
- *
+ * 克隆
  * @method clone
  * @return {Object} the event subscription
  */
 Contract.prototype.clone = function () {
-    return new this.constructor(this.options.jsonInterface, this.options.address, this.options);
+    return new this.constructor(this.options.jsonInterface, this.options.account, this.options);
 };
 
 /**
- * 根据其状态：transactionHash，receipt来部署合同和触发事件
- * 一旦触发了最后一个可能的事件（“错误”或“收据”），将删除所有事件侦听器
- * 
+ * 部署
  * @method deploy
  * @param {Object} options
- * @param {Function} callback
  * @return {Object} EventEmitter possible events are "error", "transactionHash" and "receipt"
  */
-Contract.prototype.deploy = function (options, callback) {
+Contract.prototype.deploy = function (options) {
     options = options || {};
     options.arguments = options.arguments || [];
     options = this._getOrSetDefaultOptions(options);
-
 
     //如果未指定“数据”，则返回错误
     if (!options.data) {
         return utils._fireError(new Error('No "data" specified in neither the given options, nor the default options.'), null, null, callback);
     }
-
-    //查找constructor，如果没有则为{}
-    var constructor = _.find(this.options.jsonInterface, function (method) {
+    //查找constructor ， 如果没有则为{}
+    var constructor = this.options.jsonInterface.find(function (method) {
         return (method.type === 'constructor');
     }) || {};
     constructor.signature = 'constructor';
 
-    console.log(" -------- deploy -------- ")
-    console.log("constructor", constructor)
-    console.log('options.data ==> ', options.data)
-    console.log('this.constructor._czrAccounts ==> ', this.constructor._czrAccounts)
-    console.log('options.arguments ==> ', options.arguments)
-    console.log(" -------- deploy --------  \n");
+    // console.log(" -------- deploy -------- ")
+    // console.log("constructor", constructor)
+    // console.log('options.data ==> ', options.data)
+    // console.log('this.constructor._czrAccounts ==> ', this.constructor._czrAccounts)
+    // console.log('options.arguments ==> ', options.arguments)
+    // console.log(" -------- deploy --------  \n");
     return this._createTxObject.apply({
         method: constructor,
         parent: this,
         deployData: options.data,
         _czrAccounts: this.constructor._czrAccounts
     }, options.arguments);
-
 };
-
-
-
-
-
-//----------------------------------------------------------------------------- */
 
 /**
  * 返回一个带有 call sendBlock encodeABI functions 的对象
@@ -297,7 +247,6 @@ Contract.prototype._createTxObject = function () {
     txObject._method = this.method;
     txObject._parent = this.parent;
     txObject._czrAccounts = this.parent.constructor._czrAccounts || this._czrAccounts;
-
     if (this.deployData) {
         txObject._deployData = this.deployData;
     }
@@ -306,22 +255,17 @@ Contract.prototype._createTxObject = function () {
 
 /**
  * 为方法编码ABI，包括签名或方法。或者当构造函数仅编码构造函数参数时。
- * 基于ABI来做bytycode[OK]
+ * 基于ABI来做bytycode
  * 
- * @method encodeMethodABI
+ * @method _encodeMethodABI
  * @param {Mixed} args the arguments to encode
  * @param {String} the encoded ABI
  */
-Contract.prototype._encodeMethodABI = function _encodeMethodABI() {
+Contract.prototype._encodeMethodABI = function () {
     // this有 call send _deployData
-    console.log("为方法编码ABI，包括签名或方法+++++++++++++++")
-    // console.log(this)
     var methodSignature = this._method.signature,
         args = this.arguments || [];//传的参数 [ 0, 1 ]
-    // console.log('00000', this._method.signature, args);
-
     var signature = false;
-
     var paramsABI = this._parent.options.jsonInterface.filter(function (json) {
         return ((methodSignature === 'constructor' && json.type === methodSignature) ||
             ((json.signature === methodSignature || json.signature === methodSignature.replace('0x', '') || json.name === methodSignature) && json.type === 'function'));
@@ -340,8 +284,6 @@ Contract.prototype._encodeMethodABI = function _encodeMethodABI() {
         // console.log("___encodeParameters",abi.encodeParameters(inputs, args).replace('0x', ''))
         return abi.encodeParameters(inputs, args).replace('0x', '');
     })[0] || '';//方法和参数转成16进制
-
-    // console.log("paramsABI", paramsABI, "---", methodSignature)
     // return constructor
     if (methodSignature === 'constructor') {
         //部署的时候
@@ -357,29 +299,20 @@ Contract.prototype._encodeMethodABI = function _encodeMethodABI() {
             return returnValue;
         }
     }
-
 };
 
 /**
- * Use default values, if options are not available
- * 格式化数据组装(需要上链的参数)[OK]
- * 
+ * 格式化数据组装(需要上链的参数)
  * @method getOrSetDefaultOptions
  * @param {Object} options the options gived by the user
  * @return {Object} the options with gaps filled by defaults
  */
 Contract.prototype._getOrSetDefaultOptions = function (options) {
-    // var from = options.from
-    //     ? utils.toChecksumAddress(formatters.inputAddressFormatter(options.from))
-    //     : null;
     // console.log("getOrSetDefaultOptions ===> ", this.options);
     options.from = (options.from ? options.from : null) || this.options.from;
     options.gas_price = (options.gas_price ? String(options.gas_price) : null) || this.options.gas_price;
     options.data = options.data || this.options.data;
-    options.gas = options.gas || options.gasLimit || this.options.gas;
-
-    // TODO replace with only gasLimit?
-    delete options.gasLimit;
+    options.gas = options.gas || this.options.gas;
     return options;
 };
 
@@ -396,10 +329,9 @@ Contract.setProvider = function (provider, accounts) {
 //-------------------------------------------------------------------------------------------
 
 /**
- * Executes a call, transact or estimateGas on a contract function
- * 在合同函数上执行调用，交易或估计加权
+ * 在合约上执行调用，交易
  * 
- * @method getRpc
+ * @method _getRpc
  * @param {String} type the type this execute function should execute
  * @param {Boolean} makeRequest if true, it simply returns the request parameters, rather than executing it
  */
@@ -407,10 +339,11 @@ Contract.prototype._getRpc = async function () {
     let _this = this;
     //初始化需要调用RPC的参数
     var args = this._parent._setRpcOpt.call(this, Array.prototype.slice.call(arguments));
-    // var defer = promiEvent((args.type !== 'send'));//这里没有用了
-    console.log("___getRpc：是否需要请求节点", arguments)
-    console.log("___需要的RPC交互", args)
-    console.log("___outputs", this._method.outputs);
+
+    // console.log("___getRpc：是否需要请求节点", arguments)
+    // console.log("___需要的RPC交互", args)
+    // console.log("___outputs", this._method.outputs);
+
     let argsOpts = args.options;
     switch (args.type) {
         case 'call':
@@ -421,12 +354,17 @@ Contract.prototype._getRpc = async function () {
                 mci: argsOpts.mci || ''
             }
             let result = await request.call(callOpts);
-            console.log("___result", result);
-            if (result.code === 0) {
-                return _this._parent._decodeMethodReturn(_this._method.outputs, result.output);
-            } else {
-                return result;
-            }
+            return new Promise(function (resolve, reject) {
+                if (result.code === 0) {
+                    let beautifyData = _this._parent._decodeMethodReturn(_this._method.outputs, result.output);
+                    _this._parent._runCallback(args.callback, null, beautifyData);
+                    resolve(beautifyData);
+                } else {
+                    _this._parent._runCallback(args.callback, new Error('Call Error'));
+                    reject(result);
+                }
+            })
+
         case 'send':
             let sendOpts = {
                 "from": argsOpts.from,
@@ -440,7 +378,53 @@ Contract.prototype._getRpc = async function () {
                 "id": argsOpts.id || '',
                 "previous": argsOpts.previous || ''
             }
-            return request.sendBlock(sendOpts);
+            let sendResult = await request.sendBlock(sendOpts);
+            // 返回
+            if (sendResult.code !== 0) {
+                _this._parent._runCallback(args.callback, new Error("Send Error"))
+                // return sendResult;
+                return new Promise(function (resolve, reject) {
+                    reject(sendResult);
+                })
+            }
+            _this._parent._runCallback(args.callback, null, sendResult.hash);
+
+            //再次获取
+            let searchRes;
+            let searchTimer = null;
+            let startSearchTimer;
+            return new Promise(function (resolve, reject) {
+                let startSearchHash = async function () {
+                    //上面已做过判断，必定会有hash
+                    searchRes = await request.getBlockState(sendResult.hash);
+                    if (searchRes.code !== 0) {
+                        reject(searchRes);
+                    }
+                    //判断是否稳定
+                    if (searchRes.block_state.is_stable === 0) {
+                        //不稳定,再次获取
+                        await startSearchTimer();
+                    }
+
+                    //稳定开始获取block
+                    let blockResInfo = await request.getBlock(sendResult.hash);
+                    if (blockResInfo.code !== 0) {
+                        reject(blockResInfo);
+                    }
+                    if (searchRes.block_state.is_stable === 1) {
+                        let searchResBloState = searchRes.block_state;
+                        blockResInfo.block.is_stable = searchResBloState.is_stable;
+                        blockResInfo.block.stable_content = searchResBloState.stable_content;
+                        blockResInfo.block.content.level = searchResBloState.content.level;
+                        resolve(blockResInfo);
+                    }
+                }
+                startSearchTimer = async function () {
+                    searchTimer = await setTimeout(startSearchHash, 1000);
+                }
+                startSearchTimer();
+            })
+
     }
 };
 
@@ -478,14 +462,14 @@ Contract.prototype._setRpcOpt = function (args, defer) {
     processedArgs.options.data = this.encodeABI();
 
 
-    // add contract address
-    if (!this._deployData && !utils.isAccount(this._parent.options.address)) {
-        throw new Error('This contract object doesn\'t have address set yet, please set an address first.');
+    // add contract account
+    if (!this._deployData && !utils.isAccount(this._parent.options.account)) {
+        throw new Error('This contract object doesn\'t have account set yet, please set an account first.');
     }
 
     //如果没有部署的合约，就传入的ads当做一个需要调用的合约来使用
     if (!this._deployData) {
-        processedArgs.options.to = this._parent.options.address;
+        processedArgs.options.to = this._parent.options.account;
     }
 
     // 如果未指定“数据”，则返回错误
@@ -497,16 +481,23 @@ Contract.prototype._setRpcOpt = function (args, defer) {
 
 
 /**
- * Get the callback and modiufy the array if necessary
- * 如有必要，获取回调并修改数组 1
+ * 获取回调并在必要时修改数组
  * 
- * @method getCallback
+ * @method _getCallback
  * @param {Array} args
  * @return {Function} the callback
  */
 Contract.prototype._getCallback = function (args) {
     if (args && _.isFunction(args[args.length - 1])) {
         return args.pop(); // modify the args array!
+    }
+};
+
+/** */
+
+Contract.prototype._runCallback = function (callFn, error, data) {
+    if (utils.judge(callFn) === 'function') {
+        callFn(error, data)
     }
 };
 
@@ -555,7 +546,7 @@ Contract.prototype.getPastEvents = function (eventName, options) {
     let opt = {
         "from_stable_block_index": options.from_stable_block_index || 0,
         "to_stable_block_index": options.to_stable_block_index,
-        "account": subOptions.params.address || '',
+        "account": subOptions.params.account || '',
         "topics": curTopic || ''
     }
     console.log("opt", opt);
@@ -591,8 +582,8 @@ Contract.prototype._generateEventOptions = function () {
         throw new Error('Event "' + event.name + '" doesn\'t exist in this contract.');
     }
 
-    if (!utils.isAccount(this.options.address)) {
-        throw new Error('This contract object doesn\'t have address set yet, please set an address first.');
+    if (!utils.isAccount(this.options.account)) {
+        throw new Error('This contract object doesn\'t have account set yet, please set an account first.');
     }
 
     return {
@@ -651,8 +642,8 @@ Contract.prototype._encodeEventABI = function (event, options) {
         //     delete result.topics;
         // }
     }
-    if (this.options.address) {
-        result.address = this.options.address;
+    if (this.options.account) {
+        result.account = this.options.account;
     }
     return result;
 };
